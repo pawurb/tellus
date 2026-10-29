@@ -104,6 +104,18 @@ Benchmarks:
   `replay_page`, which must stay allocation-free: `just profile-persistence-alloc-gate` runs the
   workload and fails on a violation, `profile-persistence-alloc-check <file>` applies that check
   to an existing JSON report, and CI enforces it as a budget that fails the `hotpath / profile_persistence` check in the same way.
+- `just criterion-profile <bench> <id> <iterations> [features]`: run one criterion benchmark
+  through hotpath's criterion adapter (the benches import `hotpath::criterion`), executing its
+  routine exactly `iterations` times in criterion's test mode and writing one hotpath report.
+  CI (`criterion-profile.yml`) runs it for `flood/bounded`, `ping_pong/pairs/1` and
+  `persist/snapshots` the same way `profile.yml` runs the profile examples (native run, then a
+  merged Callgrind run on the same pinned environment), as the `criterion-flood-bounded`,
+  `criterion-ping_pong-pairs-1` and `criterion-persist-snapshots` series, each judged under its own
+  `hotpath/<benchmark>-policy.toml` with `pr_check = "fail"` and relayed by `hotpath-relay.yml`.
+  The zero-alloc budgets follow what each benchmark runs: `tell`, `reserve` and `receive_incoming`
+  for `flood/bounded`; `tell` and `reserve` for `ping_pong/pairs/1`, whose `receive_incoming`
+  allocates; `apply_events` and `replay_page` for `persist/snapshots`. Without
+  `HOTPATH_CRITERION_ITERATIONS` the adapter forwards to criterion, so `just bench` is unaffected.
 - `just bench`: tellus's own criterion regression benchmarks, messaging
   (`tellus/benches/messaging.rs`) and persistence against an in-memory store
   (`tellus/benches/persistence.rs`, features `persistence` and `persistence-in-memory`); `just
